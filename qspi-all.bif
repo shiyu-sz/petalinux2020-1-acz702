@@ -1,0 +1,8 @@
+the_ROM_image:
+{
+    [bootloader] images/linux/zynq_fsbl.elf
+    images/linux/u-boot.elf
+    [load=0x00100000] images/linux/system.dtb
+    [partition_owner=uboot, offset=0x00100000] images/linux/image.ub
+    [partition_owner=uboot, offset=0x00FC0000] images/linux/boot.scr
+}

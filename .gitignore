@@ -10,3 +10,19 @@ pre-built/linux/
 *.log
 /components/plnx_workspace
 /components/yocto
+
+.petalinux
+
+# Vivado generated files (keep .xpr, .srcs, and the PetaLinux input .xsa)
+/vivado_project/*.cache/
+/vivado_project/*.gen/
+/vivado_project/*.hw/
+/vivado_project/*.ip_user_files/
+/vivado_project/*.runs/
+/vivado_project/*.sim/
+/vivado_project/.Xil/
+/vivado_project/vivado_pid*.str
+
+# Regenerable Block Design metadata and GUI layout state
+/vivado_project/*.srcs/**/bd/*/*.bda
+/vivado_project/*.srcs/**/bd/*/ui/
