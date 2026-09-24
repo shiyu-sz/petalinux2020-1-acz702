@@ -5,6 +5,10 @@ source /opt/pkg/petalinux/settings.sh
 ### 更新xsa文件  
 petalinux-config --get-hw-description ./vivado_project  
 
+###  
+petalinux-config -c kernel
+petalinux-config -c rootfs
+
 ### 清除（如果xsa更新了ps侧的配置）  
 petalinux-build -x mrproper -f  
 
