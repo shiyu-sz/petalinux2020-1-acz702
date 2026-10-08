@@ -1,7 +1,7 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0x0",
+      "boundary_crc": "0x7E578B85D3BA325A",
       "device": "xc7z020clg400-1",
       "gen_directory": "../../../../vivado_project.gen/sources_1/bd/design_1",
       "name": "design_1",
@@ -12,6 +12,12 @@
     },
     "design_tree": {
       "processing_system7_0": ""
+    },
+    "interface_ports": {
+      "GPIO_PL_EMIO": {
+        "mode": "Master",
+        "vlnv": "xilinx.com:interface:gpio_rtl:1.0"
+      }
     },
     "components": {
       "processing_system7_0": {
@@ -104,6 +110,9 @@
           "PCW_DDR_RAM_HIGHADDR": {
             "value": "0x1FFFFFFF"
           },
+          "PCW_EN_EMIO_GPIO": {
+            "value": "1"
+          },
           "PCW_EN_GPIO": {
             "value": "1"
           },
@@ -118,6 +127,15 @@
           },
           "PCW_FPGA_FCLK0_ENABLE": {
             "value": "1"
+          },
+          "PCW_GPIO_EMIO_GPIO_ENABLE": {
+            "value": "1"
+          },
+          "PCW_GPIO_EMIO_GPIO_IO": {
+            "value": "2"
+          },
+          "PCW_GPIO_EMIO_GPIO_WIDTH": {
+            "value": "2"
           },
           "PCW_GPIO_MIO_GPIO_ENABLE": {
             "value": "1"
@@ -681,6 +699,14 @@
             "value": "0"
           }
         }
+      }
+    },
+    "interface_nets": {
+      "processing_system7_0_GPIO_0": {
+        "interface_ports": [
+          "GPIO_PL_EMIO",
+          "processing_system7_0/GPIO_0"
+        ]
       }
     }
   }

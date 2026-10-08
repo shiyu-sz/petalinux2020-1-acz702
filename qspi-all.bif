@@ -1,8 +1,12 @@
 the_ROM_image:
 {
     [bootloader] images/linux/zynq_fsbl.elf
+    // FSBL configures the PL before starting U-Boot. system.bit must be
+    // generated with BITSTREAM.GENERAL.COMPRESS=TRUE to fit 16 MiB QSPI.
+    images/linux/system.bit
     images/linux/u-boot.elf
     [load=0x00100000] images/linux/system.dtb
-    [partition_owner=uboot, offset=0x00100000] images/linux/image.ub
-    [partition_owner=uboot, offset=0x00FC0000] images/linux/boot.scr
+    // Leave room for FSBL, compressed PL bitstream, U-Boot and DTB.
+    [partition_owner=uboot, offset=0x001F0000] images/linux/boot.scr
+    [partition_owner=uboot, offset=0x00200000] images/linux/image.ub
 }
