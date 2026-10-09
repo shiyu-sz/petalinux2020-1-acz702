@@ -28,3 +28,8 @@ program_flash \
     -flash_type qspi-x4-single \
     -fsbl ./images/linux/zynq_fsbl.elf \
     -verify
+
+###  
+stty -F /dev/ttyS0 115200 cs8 -cstopb -parenb -crtscts -ixon -ixoff raw -echo
+cat /dev/ttyS0
+printf 'PL_UART_OK\r\n' > /dev/ttyS0

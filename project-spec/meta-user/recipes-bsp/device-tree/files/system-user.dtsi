@@ -1,3 +1,24 @@
 /include/ "system-conf.dtsi"
 / {
+	/* This merges with the generated amba_pl node when pl.dtsi is present. */
+	amba_pl {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "simple-bus";
+		ranges;
+
+		serial@43c00000 {
+			compatible = "xlnx,xps-uart16550-2.00.a", "ns16550a";
+			reg = <0x43c00000 0x10000>;
+			reg-offset = <0x1000>;
+			reg-shift = <2>;
+			/* Let 8250_of keep PS FCLK0 enabled and read its actual rate. */
+			/delete-property/ clock-frequency;
+			clocks = <&clkc 15>;
+			clock-names = "ref_clk";
+			interrupt-parent = <&intc>;
+			interrupts = <0 29 4>;
+			status = "okay";
+		};
+	};
 };
