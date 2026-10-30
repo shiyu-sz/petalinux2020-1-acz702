@@ -3520,7 +3520,7 @@ CONFIG_bridge-utils=y
 # CONFIG_libdrm-dbg is not set
 # CONFIG_libdrm-drivers is not set
 # CONFIG_libdrm-nouveau is not set
-# CONFIG_libdrm-tests is not set
+CONFIG_libdrm-tests=y
 # CONFIG_libdrm-freedreno is not set
 # CONFIG_libdrm-radeon is not set
 # CONFIG_libdrm-kms is not set

@@ -22,3 +22,90 @@
 		};
 	};
 };
+
+/* PL display pipeline: VDMA -> PL display/CRTC -> SII9022 HDMI bridge. */
+&axi_dynclk_0 {
+	compatible = "digilent,axi-dynclk";
+	#clock-cells = <0>;
+	clocks = <&clkc 15>;
+	clock-output-names = "hdmi_pixel_clk";
+	status = "okay";
+};
+
+&v_tc_0 {
+	/* The PL DRM bridge driver supports the VTC 6.1 programming model. */
+	compatible = "xlnx,bridge-v-tc-6.1", "xlnx,v-tc-6.2";
+	xlnx,pixels-per-clock = <1>;
+	clocks = <&clkc 15>, <&axi_dynclk_0>;
+	clock-names = "s_axi_aclk", "clk";
+	status = "okay";
+};
+
+&i2c1 {
+	status = "okay";
+
+	sii9022: hdmi-bridge@39 {
+		compatible = "sil,sii9022";
+		reg = <0x39>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				sii9022_in: endpoint {
+					remote-endpoint = <&hdmi_output_out>;
+				};
+			};
+		};
+	};
+};
+
+/ {
+	amba_pl {
+		hdmi_pl_disp: hdmi-pl-disp {
+			compatible = "xlnx,pl-disp";
+			dmas = <&axi_vdma_0 0>;
+			dma-names = "dma0";
+			/* AXI VDMA reads RGB565 frames; PL converts to RGB888 for HDMI. */
+			xlnx,vformat = "RG16";
+			xlnx,bridge = <&v_tc_0>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					hdmi_pl_out: endpoint {
+						remote-endpoint = <&hdmi_output_in>;
+					};
+				};
+			};
+		};
+
+		/* Connector component joins Xilinx DRM to the standard SII9022 bridge. */
+		hdmi_output: hdmi-output {
+			compatible = "xlnx,drm-hdmi-output";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					hdmi_output_in: endpoint {
+						remote-endpoint = <&hdmi_pl_out>;
+					};
+				};
+				port@1 {
+					reg = <1>;
+					hdmi_output_out: endpoint {
+						remote-endpoint = <&sii9022_in>;
+					};
+				};
+			};
+		};
+	};
+};

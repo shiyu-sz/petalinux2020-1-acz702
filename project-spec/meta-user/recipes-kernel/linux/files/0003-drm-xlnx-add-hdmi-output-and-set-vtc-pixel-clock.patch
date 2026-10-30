@@ -1,0 +1,192 @@
+From: Local PetaLinux HDMI integration
+Subject: [PATCH] drm: xlnx: connect PL display to DRM HDMI bridge
+
+Add an encoder component for DRM bridges on the Xilinx PL display
+pipeline and program the VTC pixel clock from the selected display mode.
+
+--- a/drivers/gpu/drm/xlnx/Kconfig
++++ b/drivers/gpu/drm/xlnx/Kconfig
+@@ -71,6 +71,13 @@
+ 	  choose this option if your display pipeline needs one
+ 	  crtc and plane object with single DMA connected.
+ 
++config DRM_XLNX_HDMI_OUTPUT
++	tristate "Xilinx DRM HDMI bridge output component"
++	depends on DRM_XLNX && OF
++	help
++	  DRM encoder component that connects the Xilinx PL display pipeline
++	  to a standard DRM bridge such as the Silicon Image SII9022.
++
+ config DRM_XLNX_SDI
+ 	tristate "Xilinx DRM SDI Subsystem Driver"
+ 	depends on DRM_XLNX
+--- a/drivers/gpu/drm/xlnx/Makefile
++++ b/drivers/gpu/drm/xlnx/Makefile
+@@ -13,6 +13,7 @@
+ obj-$(CONFIG_DRM_XLNX_MIXER) += xlnx_mixer.o
+ 
+ obj-$(CONFIG_DRM_XLNX_PL_DISP) += xlnx_pl_disp.o
++obj-$(CONFIG_DRM_XLNX_HDMI_OUTPUT) += xlnx_hdmi_output.o
+ 
+ xlnx-sdi-objs += xlnx_sdi.o xlnx_sdi_timing.o
+ obj-$(CONFIG_DRM_XLNX_SDI) += xlnx-sdi.o
+--- a/drivers/gpu/drm/xlnx/xlnx_vtc.c
++++ b/drivers/gpu/drm/xlnx/xlnx_vtc.c
+@@ -194,6 +194,15 @@
+ 	u32 htotal, hactive, hsync_start, hbackporch_start;
+ 	u32 vtotal, vactive, vsync_start, vbackporch_start;
+ 	struct xlnx_vtc *vtc = bridge_to_vtc(bridge);
++	int ret;
++
++	/* The VTC and HDMI transmitter must use the selected mode's pixel clock. */
++	ret = clk_set_rate(vtc->vid_clk, vm->pixelclock);
++	if (ret) {
++		dev_err(vtc->dev, "failed to set video clock to %lu Hz: %d\n",
++			vm->pixelclock, ret);
++		return ret;
++	}
+ 
+ 	reg = xlnx_vtc_readl(vtc->base, XVTC_CTL);
+ 	xlnx_vtc_writel(vtc->base, XVTC_CTL, reg & ~XVTC_CTL_RU);
+--- /dev/null
++++ b/drivers/gpu/drm/xlnx/xlnx_hdmi_output.c
+@@ -0,0 +1,118 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Xilinx PL display connector for a DRM bridge output.
++ *
++ * The PL display pipeline uses the Xilinx component framework, while
++ * bridges such as sii902x use the DRM bridge framework. This small component
++ * provides the encoder that joins the two frameworks.
++ */
++#include <drm/drmP.h>
++#include <drm/drm_bridge.h>
++#include <drm/drm_crtc.h>
++#include <drm/drm_encoder.h>
++#include <drm/drm_of.h>
++
++#include <linux/component.h>
++#include <linux/device.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/platform_device.h>
++#include <linux/slab.h>
++
++struct xlnx_hdmi_output {
++	struct drm_bridge *bridge;
++	struct drm_encoder encoder;
++	bool encoder_initialized;
++};
++
++static const struct drm_encoder_funcs xlnx_hdmi_encoder_funcs = {
++	.destroy = drm_encoder_cleanup,
++};
++
++static int xlnx_hdmi_output_bind(struct device *dev, struct device *master,
++				 void *data)
++{
++	struct xlnx_hdmi_output *output = dev_get_drvdata(dev);
++	struct drm_device *drm = data;
++	int ret;
++
++	ret = drm_encoder_init(drm, &output->encoder,
++			       &xlnx_hdmi_encoder_funcs,
++			       DRM_MODE_ENCODER_TMDS, NULL);
++	if (ret)
++		return ret;
++
++	output->encoder_initialized = true;
++	/* The PL display component provides the pipeline's single CRTC. */
++	output->encoder.possible_crtcs = 1;
++
++	ret = drm_bridge_attach(&output->encoder, output->bridge, NULL);
++	if (ret) {
++		drm_encoder_cleanup(&output->encoder);
++		output->encoder_initialized = false;
++	}
++
++	return ret;
++}
++
++static void xlnx_hdmi_output_unbind(struct device *dev, struct device *master,
++				    void *data)
++{
++	struct xlnx_hdmi_output *output = dev_get_drvdata(dev);
++
++	if (output->encoder_initialized) {
++		drm_encoder_cleanup(&output->encoder);
++		output->encoder_initialized = false;
++	}
++}
++
++static const struct component_ops xlnx_hdmi_output_component_ops = {
++	.bind = xlnx_hdmi_output_bind,
++	.unbind = xlnx_hdmi_output_unbind,
++};
++
++static int xlnx_hdmi_output_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct xlnx_hdmi_output *output;
++	int ret;
++
++	output = devm_kzalloc(dev, sizeof(*output), GFP_KERNEL);
++	if (!output)
++		return -ENOMEM;
++
++	ret = drm_of_find_panel_or_bridge(dev->of_node, 1, 0, NULL,
++					  &output->bridge);
++	if (ret) {
++		dev_err(dev, "failed to find HDMI DRM bridge: %d\n", ret);
++		return ret;
++	}
++
++	platform_set_drvdata(pdev, output);
++	return component_add(dev, &xlnx_hdmi_output_component_ops);
++}
++
++static int xlnx_hdmi_output_remove(struct platform_device *pdev)
++{
++	component_del(&pdev->dev, &xlnx_hdmi_output_component_ops);
++	return 0;
++}
++
++static const struct of_device_id xlnx_hdmi_output_of_match[] = {
++	{ .compatible = "xlnx,drm-hdmi-output" },
++	{ /* sentinel */ }
++};
++MODULE_DEVICE_TABLE(of, xlnx_hdmi_output_of_match);
++
++static struct platform_driver xlnx_hdmi_output_driver = {
++	.probe = xlnx_hdmi_output_probe,
++	.remove = xlnx_hdmi_output_remove,
++	.driver = {
++		.name = "xlnx-drm-hdmi-output",
++		.of_match_table = xlnx_hdmi_output_of_match,
++	},
++};
++module_platform_driver(xlnx_hdmi_output_driver);
++
++MODULE_DESCRIPTION("Xilinx PL DRM HDMI bridge output component");
++MODULE_LICENSE("GPL v2");
+--- /dev/null
++++ b/Documentation/devicetree/bindings/display/xlnx/xlnx-hdmi-output.txt
+@@ -0,0 +1,18 @@
++Xilinx PL DRM HDMI output component
++-----------------------------------
++
++The xlnx,drm-hdmi-output component joins a Xilinx PL display pipeline to a
++DRM bridge. Port 0 is connected to the xlnx,pl-disp node; port 1 is connected
++to a DRM bridge such as sil,sii9022.
++
++Example:
++
++	hdmi-output {
++		compatible = "xlnx,drm-hdmi-output";
++		ports {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			port@0 { reg = <0>; output_in: endpoint { remote-endpoint = <&pl_disp_out>; }; };
++			port@1 { reg = <1>; output_out: endpoint { remote-endpoint = <&sii9022_in>; }; };
++		};
++	};

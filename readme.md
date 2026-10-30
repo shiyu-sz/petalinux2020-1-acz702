@@ -33,3 +33,6 @@ program_flash \
 stty -F /dev/ttyS0 115200 cs8 -cstopb -parenb -crtscts -ixon -ixoff raw -echo
 cat /dev/ttyS0
 printf 'PL_UART_OK\r\n' > /dev/ttyS0
+
+###  
+modetest -M xlnx -s 34:1280x720-60@RG16
