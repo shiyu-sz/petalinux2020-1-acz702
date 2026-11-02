@@ -36,3 +36,10 @@ printf 'PL_UART_OK\r\n' > /dev/ttyS0
 
 ###  
 modetest -M xlnx -s 34:1280x720-60@RG16
+
+### OV2640 V4L2 采集
+```sh
+media-ctl -p -d /dev/media0
+v4l2-ctl -d /dev/video0 --get-fmt-video
+v4l2-ctl -d /dev/video0 --stream-mmap=1 --stream-count=1 --stream-to=/tmp/ov2640-test.rgb16
+```

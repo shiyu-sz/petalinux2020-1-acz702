@@ -1,5 +1,13 @@
 /include/ "system-conf.dtsi"
 / {
+	/* The PL clock wizard continuously drives the OV2640 XVCLK at 24 MHz. */
+	ov2640_xclk: ov2640-xclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+		clock-output-names = "ov2640_xvclk";
+	};
+
 	/* This merges with the generated amba_pl node when pl.dtsi is present. */
 	amba_pl {
 		#address-cells = <1>;
@@ -19,6 +27,28 @@
 			interrupt-parent = <&intc>;
 			interrupts = <0 29 4>;
 			status = "okay";
+		};
+
+		/* S2MM channel 1 captures the DVP stream into DDR for V4L2. */
+		ov2640_vipp: ov2640-vipp {
+			compatible = "xlnx,video";
+			dmas = <&axi_vdma_0 1>;
+			dma-names = "port0";
+
+			/* The fixed-function PL unpack/AXI-stream blocks are not
+			 * separately programmable V4L2 subdevices. */
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					direction = "input";
+					ov2640_vcap_in: endpoint {
+						remote-endpoint = <&ov2640_out>;
+					};
+				};
+			};
 		};
 	};
 };
@@ -57,6 +87,29 @@
 				sii9022_in: endpoint {
 					remote-endpoint = <&hdmi_output_out>;
 				};
+			};
+		};
+	};
+};
+
+/* PS I2C0 is exported from PL as OV2640_SCCB on N17/P18. */
+&i2c0 {
+	status = "okay";
+
+	ov2640: camera@30 {
+		compatible = "ovti,ov2640";
+		reg = <0x30>;
+		clocks = <&ov2640_xclk>;
+		clock-names = "xvclk";
+
+		port {
+			ov2640_out: endpoint {
+				remote-endpoint = <&ov2640_vcap_in>;
+				bus-type = <5>; /* Parallel DVP */
+				bus-width = <8>;
+				pclk-sample = <1>;
+				hsync-active = <1>;
+				vsync-active = <1>;
 			};
 		};
 	};

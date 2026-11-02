@@ -6,7 +6,8 @@ the_ROM_image:
     images/linux/system.bit
     images/linux/u-boot.elf
     [load=0x00100000] images/linux/system.dtb
-    // Keep payloads beyond the end of FSBL, bitstream, U-Boot and DTB.
-    [partition_owner=uboot, offset=0x00230000] images/linux/boot.scr
-    [partition_owner=uboot, offset=0x00240000] images/linux/image.ub
+    // The FSBL, bitstream, U-Boot and DTB occupy through 0x283100.
+    // Keep U-Boot-loaded payloads beyond those sections.
+    [partition_owner=uboot, offset=0x00290000] images/linux/boot.scr
+    [partition_owner=uboot, offset=0x002A0000] images/linux/image.ub
 }

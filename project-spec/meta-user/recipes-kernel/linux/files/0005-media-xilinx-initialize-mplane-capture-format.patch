@@ -1,0 +1,36 @@
+From: Codex <codex@openai.com>
+Subject: [PATCH] media: xilinx: initialize multiplanar DMA format fields
+
+Initialize the default height and memory-plane count for Xilinx VIPP
+multiplanar nodes. Also report the correct memory-plane count whenever
+userspace negotiates a format.
+
+---
+ drivers/media/platform/xilinx/xilinx-dma.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/media/platform/xilinx/xilinx-dma.c b/drivers/media/platform/xilinx/xilinx-dma.c
+index 0000000..0000000 100644
+--- a/drivers/media/platform/xilinx/xilinx-dma.c
++++ b/drivers/media/platform/xilinx/xilinx-dma.c
+@@ -1264,6 +1264,8 @@ int xvip_dma_init(struct xvip_composite_device *xdev, struct xvip_dma *dma,
+ 		pix_mp->colorspace = V4L2_COLORSPACE_SRGB;
+ 		pix_mp->field = V4L2_FIELD_NONE;
+ 		pix_mp->width = XVIP_DMA_DEF_WIDTH;
++		pix_mp->height = XVIP_DMA_DEF_HEIGHT;
++		pix_mp->num_planes = dma->fmtinfo->buffers;
+ 
+ 		/* Handling contiguous data with mplanes */
+ 		if (dma->fmtinfo->buffers == 1) {
+@@ -858,6 +860,7 @@ static void
+ 	if (V4L2_TYPE_IS_MULTIPLANAR(dma->format.type)) {
+ 		struct v4l2_pix_format_mplane *pix_mp;
+ 		struct v4l2_plane_pix_format *plane_fmt;
+ 
+ 		pix_mp = &format->fmt.pix_mp;
++		pix_mp->num_planes = info->buffers;
+ 		plane_fmt = pix_mp->plane_fmt;
+ 		pix_mp->field = dma->format.fmt.pix_mp.field;
+ 		width = rounddown(pix_mp->width * info->bpl_factor, align);
+-- 
+2.25.1

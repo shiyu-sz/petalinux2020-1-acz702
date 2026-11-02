@@ -1,0 +1,27 @@
+From: Codex <codex@openai.com>
+Subject: [PATCH] media: xilinx: map OV2640 DVP UYVY to V4L2 UYVY
+
+The OV2640 reports UYVY over its 8-bit parallel bus as two cycles per pixel.
+The Xilinx VIPP format table only listed the packed 16-bit-per-cycle bus code,
+so the capture node could not enumerate the sensor's default format.
+
+---
+ drivers/media/platform/xilinx/xilinx-vip.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/media/platform/xilinx/xilinx-vip.c b/drivers/media/platform/xilinx/xilinx-vip.c
+index 0000000..0000000 100644
+--- a/drivers/media/platform/xilinx/xilinx-vip.c
++++ b/drivers/media/platform/xilinx/xilinx-vip.c
+@@ -47,5 +47,8 @@ static const struct xvip_video_format xvip_video_formats[] = {
+ 	{ XVIP_VF_YUV_422, 8, NULL, MEDIA_BUS_FMT_UYVY8_1X16,
+ 	  2, 16, V4L2_PIX_FMT_YUYV, 1, 1, 2, 1 },
+ 	{ XVIP_VF_VUY_422, 8, NULL, MEDIA_BUS_FMT_UYVY8_1X16,
+ 	  2, 16, V4L2_PIX_FMT_UYVY, 1, 1, 2, 1 },
++	/* OV2640's 8-bit DVP output sends each UYVY pixel over two cycles. */
++	{ XVIP_VF_VUY_422, 8, NULL, MEDIA_BUS_FMT_UYVY8_2X8,
++	  2, 16, V4L2_PIX_FMT_UYVY, 1, 1, 2, 1 },
+ 	{ XVIP_VF_YUV_422, 10, NULL, MEDIA_BUS_FMT_UYVY10_1X20,
+ 	  1, 16, V4L2_PIX_FMT_XV20, 2, 1, 2, 1 },
+-- 
+2.25.1

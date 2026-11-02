@@ -1,0 +1,149 @@
+From: Codex <codex@openai.com>
+Subject: [PATCH] media: ov2640: default to RGB565 800x480 for ACZ702 pipeline
+
+Configure the OV2640 sensor to match the known working Vitis pipeline. Add
+the centered 800x480 crop, use RGB565 high-byte-first on the DVP bus, and
+make the Xilinx capture node default to the corresponding RGB565 memory
+format and frame size.
+
+---
+ drivers/media/i2c/ov2640.c                    | 48 ++++++++++++++++++++++++++++-
+ drivers/media/platform/xilinx/xilinx-vip.c    |  3 ++
+ drivers/media/platform/xilinx/xilinx-dma.c    | 10 ++++--
+ 3 files changed, 54 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/media/i2c/ov2640.c b/drivers/media/i2c/ov2640.c
+--- a/drivers/media/i2c/ov2640.c
++++ b/drivers/media/i2c/ov2640.c
+@@ -317,6 +317,9 @@
+ 
+ #define ENDMARKER { 0xff, 0xff }
+ 
++#define OV2640_800X480_WIDTH  800
++#define OV2640_800X480_HEIGHT 480
++
+ static const struct regval_list ov2640_init_regs[] = {
+ 	{ BANK_SEL, BANK_SEL_DSP },
+ 	{ 0x2c,   0xff },
+@@ -553,6 +556,41 @@ static const struct regval_list ov2640_svga_regs[] = {
+ 	ENDMARKER,
+ };
+ 
++/* SVGA sensor window, center-cropped to the Vitis 800x480 output. */
++static const struct regval_list ov2640_800x480_regs[] = {
++	{ BANK_SEL, BANK_SEL_SENS },
++	{ COM7, COM7_RES_SVGA },
++	{ HSTART, 0x11 },
++	{ HEND, 0x43 },
++	{ VSTART, 0x00 },
++	{ VEND, 0x4b },
++	{ REG32, 0x09 },
++	{ 0x37, 0xc0 },
++	{ 0x3d, 0x38 },
++	{ BANK_SEL, BANK_SEL_DSP },
++	{ HSIZE8, HSIZE8_SET(SVGA_WIDTH) },
++	{ VSIZE8, VSIZE8_SET(SVGA_HEIGHT) },
++	{ SIZEL, 0x00 },
++	{ CTRL2, CTRL2_DCW_EN | CTRL2_SDE_EN | CTRL2_UV_ADJ_EN |
++		 CTRL2_UV_AVG_EN | CTRL2_CMX_EN },
++	{ CTRLI, 0x00 },
++	{ HSIZE, HSIZE_SET(OV2640_800X480_WIDTH) },
++	{ VSIZE, VSIZE_SET(OV2640_800X480_HEIGHT) },
++	{ XOFFL, XOFFL_SET(0) },
++	{ YOFFL, YOFFL_SET((SVGA_HEIGHT - OV2640_800X480_HEIGHT) / 2) },
++	{ VHYX, VHYX_HSIZE_SET(OV2640_800X480_WIDTH) |
++		 VHYX_VSIZE_SET(OV2640_800X480_HEIGHT) |
++		 VHYX_XOFF_SET(0) |
++		 VHYX_YOFF_SET((SVGA_HEIGHT - OV2640_800X480_HEIGHT) / 2) },
++	{ ZMOW, ZMOW_OUTW_SET(OV2640_800X480_WIDTH) },
++	{ ZMOH, ZMOH_OUTH_SET(OV2640_800X480_HEIGHT) },
++	{ ZMHH, ZMHH_OUTW_SET(OV2640_800X480_WIDTH) |
++		 ZMHH_OUTH_SET(OV2640_800X480_HEIGHT) },
++	{ R_DVP_SP, R_DVP_SP_AUTO_MODE | 0x02 },
++	{ RESET, 0x00 },
++	ENDMARKER,
++};
++
+ static const struct regval_list ov2640_xga_regs[] = {
+ 	PER_SIZE_REG_SEQ(XGA_WIDTH, XGA_HEIGHT, 0, 0, 2),
+ 	{ CTRLI,    0x00},
+@@ -581,5 +619,7 @@ static const struct ov2640_win_size ov2640_supported_win_sizes[] = {
+ 	OV2640_SIZE("CIF", CIF_WIDTH, CIF_HEIGHT, ov2640_cif_regs),
+ 	OV2640_SIZE("VGA", VGA_WIDTH, VGA_HEIGHT, ov2640_vga_regs),
++	OV2640_SIZE("800x480", OV2640_800X480_WIDTH, OV2640_800X480_HEIGHT,
++		    ov2640_800x480_regs),
+ 	OV2640_SIZE("SVGA", SVGA_WIDTH, SVGA_HEIGHT, ov2640_svga_regs),
+ 	OV2640_SIZE("XGA", XGA_WIDTH, XGA_HEIGHT, ov2640_xga_regs),
+ 	OV2640_SIZE("SXGA", SXGA_WIDTH, SXGA_HEIGHT, ov2640_sxga_regs),
+@@ -1011,11 +1051,11 @@ static int ov2640_init_cfg(struct v4l2_subdev *sd,
+ 	struct v4l2_mbus_framefmt *try_fmt =
+ 		v4l2_subdev_get_try_format(sd, cfg, 0);
+ 	const struct ov2640_win_size *win =
+-		ov2640_select_win(SVGA_WIDTH, SVGA_HEIGHT);
++		ov2640_select_win(OV2640_800X480_WIDTH, OV2640_800X480_HEIGHT);
+ 
+ 	try_fmt->width = win->width;
+ 	try_fmt->height = win->height;
+-	try_fmt->code = MEDIA_BUS_FMT_UYVY8_2X8;
++	try_fmt->code = MEDIA_BUS_FMT_RGB565_2X8_BE;
+ 	try_fmt->colorspace = V4L2_COLORSPACE_SRGB;
+ 	try_fmt->field = V4L2_FIELD_NONE;
+ 	try_fmt->ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT;
+@@ -1219,8 +1259,8 @@ static int ov2640_probe(struct i2c_client *client)
+ 	if (ret)
+ 		goto err_clk;
+ 
+-	priv->win = ov2640_select_win(SVGA_WIDTH, SVGA_HEIGHT);
+-	priv->cfmt_code = MEDIA_BUS_FMT_UYVY8_2X8;
++	priv->win = ov2640_select_win(OV2640_800X480_WIDTH, OV2640_800X480_HEIGHT);
++	priv->cfmt_code = MEDIA_BUS_FMT_RGB565_2X8_BE;
+ 
+ 	v4l2_i2c_subdev_init(&priv->subdev, client, &ov2640_subdev_ops);
+ 	priv->subdev.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE |
+diff --git a/drivers/media/platform/xilinx/xilinx-vip.c b/drivers/media/platform/xilinx/xilinx-vip.c
+--- a/drivers/media/platform/xilinx/xilinx-vip.c
++++ b/drivers/media/platform/xilinx/xilinx-vip.c
+@@ -51,5 +51,8 @@ static const struct xvip_video_format xvip_video_formats[] = {
+ 	/* OV2640's 8-bit DVP output sends each UYVY pixel over two cycles. */
+ 	{ XVIP_VF_VUY_422, 8, NULL, MEDIA_BUS_FMT_UYVY8_2X8,
+ 	  2, 16, V4L2_PIX_FMT_UYVY, 1, 1, 2, 1 },
++	/* The PL unpacks the OV2640's BE bus bytes into RGB565 pixels. */
++	{ XVIP_VF_RBG, 8, NULL, MEDIA_BUS_FMT_RGB565_2X8_BE,
++	  2, 16, V4L2_PIX_FMT_RGB565, 1, 1, 1, 1 },
+ 	{ XVIP_VF_YUV_422, 10, NULL, MEDIA_BUS_FMT_UYVY10_1X20,
+ 	  1, 16, V4L2_PIX_FMT_XV20, 2, 1, 2, 1 },
+diff --git a/drivers/media/platform/xilinx/xilinx-dma.c b/drivers/media/platform/xilinx/xilinx-dma.c
+--- a/drivers/media/platform/xilinx/xilinx-dma.c
++++ b/drivers/media/platform/xilinx/xilinx-dma.c
+@@ -28,9 +28,9 @@
+ #include "xilinx-vip.h"
+ #include "xilinx-vipp.h"
+ 
+-#define XVIP_DMA_DEF_FORMAT		V4L2_PIX_FMT_YUYV
+-#define XVIP_DMA_DEF_WIDTH		1920
+-#define XVIP_DMA_DEF_HEIGHT		1080
++#define XVIP_DMA_DEF_FORMAT		V4L2_PIX_FMT_RGB565
++#define XVIP_DMA_DEF_WIDTH		800
++#define XVIP_DMA_DEF_HEIGHT		480
+ 
+ /* Minimum and maximum widths are expressed in bytes */
+ #define XVIP_DMA_MIN_WIDTH		1U
+@@ -1268,5 +1268,7 @@ int xvip_dma_init(struct xvip_composite_device *xdev, struct xvip_dma *dma,
+ 		pix_mp->height = XVIP_DMA_DEF_HEIGHT;
+ 		pix_mp->num_planes = dma->fmtinfo->buffers;
++		dma->r.width = pix_mp->width;
++		dma->r.height = pix_mp->height;
+ 
+ 		/* Handling contiguous data with mplanes */
+ 		if (dma->fmtinfo->buffers == 1) {
+@@ -1297,6 +1299,8 @@ int xvip_dma_init(struct xvip_composite_device *xdev, struct xvip_dma *dma,
+ 		pix->field = V4L2_FIELD_NONE;
+ 		pix->width = XVIP_DMA_DEF_WIDTH;
+ 		pix->height = XVIP_DMA_DEF_HEIGHT;
++		dma->r.width = pix->width;
++		dma->r.height = pix->height;
+ 		pix->bytesperline = pix->width * dma->fmtinfo->bpl_factor;
+ 		pix->sizeimage =
+ 			pix->width * pix->height * dma->fmtinfo->bpp / 8;
+-- 
+2.25.1
