@@ -91,22 +91,25 @@ NAND_FIT_IMAGE_SIZE = "0x6400000"
 FIT_IMAGE = "image.ub"
 
 python () {
-    baseaddr = d.getVar('DDR_BASEADDR') or "0x0"
-    if baseaddr == "0x0":
-        d.setVar('PRE_BOOTENV','')
-    else:
-        soc_family = d.getVar('SOC_FAMILY') or ""
-        if soc_family == "zynqmp":
-            fdt_high = "0x10000000"
-        elif soc_family == "zynq":
-            fdt_high = "0x20000000"
-        elif soc_family == "versal":
-            fdt_high = "0x70000000"
+    soc_family = d.getVar('SOC_FAMILY') or ""
+    fdt_high = ""
+    if soc_family == "zynqmp":
+        fdt_high = "0x10000000"
+    elif soc_family == "zynq":
+        # Keep boot payloads below the top 128 MiB shared-memory carveout.
+        fdt_high = "0x18000000"
+    elif soc_family == "versal":
+        fdt_high = "0x70000000"
 
-        if fdt_high:
-            basefdt_high = append_baseaddr(d,fdt_high)
-            bootenv = "setenv fdt_high " + basefdt_high
-            d.setVar('PRE_BOOTENV',bootenv)
+    if fdt_high:
+        basefdt_high = append_baseaddr(d,fdt_high)
+        bootenv = "setenv fdt_high " + basefdt_high
+        if soc_family == "zynq":
+            baseinitrd_high = append_baseaddr(d,"0x18000000")
+            bootenv += "; setenv initrd_high " + baseinitrd_high
+        d.setVar('PRE_BOOTENV',bootenv)
+    else:
+        d.setVar('PRE_BOOTENV','')
 }
 
 def append_baseaddr(d,offset):

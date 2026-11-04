@@ -1,5 +1,17 @@
 /include/ "system-conf.dtsi"
 / {
+	/* Reserve the top 128 MiB of the 512 MiB DDR for shared memory. */
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		shared_memory: shared-memory@18000000 {
+			reg = <0x18000000 0x08000000>;
+			no-map;
+		};
+	};
+
 	/* The PL clock wizard continuously drives the OV2640 XVCLK at 24 MHz. */
 	ov2640_xclk: ov2640-xclk {
 		compatible = "fixed-clock";
