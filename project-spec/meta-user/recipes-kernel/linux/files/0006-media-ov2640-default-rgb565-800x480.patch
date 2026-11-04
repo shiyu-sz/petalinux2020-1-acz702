@@ -103,9 +103,8 @@ diff --git a/drivers/media/i2c/ov2640.c b/drivers/media/i2c/ov2640.c
 diff --git a/drivers/media/platform/xilinx/xilinx-vip.c b/drivers/media/platform/xilinx/xilinx-vip.c
 --- a/drivers/media/platform/xilinx/xilinx-vip.c
 +++ b/drivers/media/platform/xilinx/xilinx-vip.c
-@@ -51,5 +51,8 @@ static const struct xvip_video_format xvip_video_formats[] = {
- 	/* OV2640's 8-bit DVP output sends each UYVY pixel over two cycles. */
- 	{ XVIP_VF_VUY_422, 8, NULL, MEDIA_BUS_FMT_UYVY8_2X8,
+@@ -49,4 +49,7 @@ static const struct xvip_video_format xvip_video_formats[] = {
+ 	{ XVIP_VF_VUY_422, 8, NULL, MEDIA_BUS_FMT_UYVY8_1X16,
  	  2, 16, V4L2_PIX_FMT_UYVY, 1, 1, 2, 1 },
 +	/* The PL unpacks the OV2640's BE bus bytes into RGB565 pixels. */
 +	{ XVIP_VF_RBG, 8, NULL, MEDIA_BUS_FMT_RGB565_2X8_BE,

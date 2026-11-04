@@ -1,0 +1,85 @@
+From: Local ACZ702 camera integration
+Subject: [PATCH] media: ov2640: add RGB565 1280x720 crop mode
+
+Expose a centered 1280x720 window from the OV2640 UXGA input. Set the
+Xilinx V4L2 capture default to the same geometry so camera-fb can scan out
+the captured image at the HDMI 720p size without scaling.
+
+---
+ drivers/media/i2c/ov2640.c                 | 27 +++++++++++++++++++++++--
+ drivers/media/platform/xilinx/xilinx-dma.c |  4 ++--
+ 2 files changed, 29 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/media/i2c/ov2640.c b/drivers/media/i2c/ov2640.c
+--- a/drivers/media/i2c/ov2640.c
++++ b/drivers/media/i2c/ov2640.c
+@@ -319,4 +319,6 @@
+ #define OV2640_800X480_WIDTH  800
+ #define OV2640_800X480_HEIGHT 480
++#define OV2640_1280X720_WIDTH  1280
++#define OV2640_1280X720_HEIGHT 720
+ 
+ static const struct regval_list ov2640_init_regs[] = {
+@@ -592,4 +594,25 @@ static const struct regval_list ov2640_800x480_regs[] = {
+ 	ENDMARKER,
+ };
+ 
++/* Center-crop the UXGA input to the HDMI 1280x720 aspect ratio. */
++static const struct regval_list ov2640_1280x720_regs[] = {
++	{ BANK_SEL, BANK_SEL_DSP },
++	{ CTRLI, 0x00 },
++	{ HSIZE, HSIZE_SET(OV2640_1280X720_WIDTH) },
++	{ VSIZE, VSIZE_SET(OV2640_1280X720_HEIGHT) },
++	{ XOFFL, XOFFL_SET((UXGA_WIDTH - OV2640_1280X720_WIDTH) / 2) },
++	{ YOFFL, YOFFL_SET((UXGA_HEIGHT - OV2640_1280X720_HEIGHT) / 2) },
++	{ VHYX, VHYX_HSIZE_SET(OV2640_1280X720_WIDTH) |
++		 VHYX_VSIZE_SET(OV2640_1280X720_HEIGHT) |
++		 VHYX_XOFF_SET((UXGA_WIDTH - OV2640_1280X720_WIDTH) / 2) |
++		 VHYX_YOFF_SET((UXGA_HEIGHT - OV2640_1280X720_HEIGHT) / 2) },
++	{ ZMOW, ZMOW_OUTW_SET(OV2640_1280X720_WIDTH) },
++	{ ZMOH, ZMOH_OUTH_SET(OV2640_1280X720_HEIGHT) },
++	{ ZMHH, ZMHH_OUTW_SET(OV2640_1280X720_WIDTH) |
++		 ZMHH_OUTH_SET(OV2640_1280X720_HEIGHT) },
++	{ R_DVP_SP, R_DVP_SP_AUTO_MODE | 0x02 },
++	{ RESET, 0x00 },
++	ENDMARKER,
++};
++
+ static const struct regval_list ov2640_xga_regs[] = {
+@@ -622,4 +645,6 @@ static const struct ov2640_win_size ov2640_supported_win_sizes[] = {
+ 	OV2640_SIZE("SVGA", SVGA_WIDTH, SVGA_HEIGHT, ov2640_svga_regs),
+ 	OV2640_SIZE("XGA", XGA_WIDTH, XGA_HEIGHT, ov2640_xga_regs),
++	OV2640_SIZE("1280x720", OV2640_1280X720_WIDTH,
++		    OV2640_1280X720_HEIGHT, ov2640_1280x720_regs),
+ 	OV2640_SIZE("SXGA", SXGA_WIDTH, SXGA_HEIGHT, ov2640_sxga_regs),
+ 	OV2640_SIZE("UXGA", UXGA_WIDTH, UXGA_HEIGHT, ov2640_uxga_regs),
+@@ -1051,4 +1076,4 @@ static int ov2640_init_cfg(struct v4l2_subdev *sd,
+ 	struct v4l2_mbus_framefmt *try_fmt =
+ 		v4l2_subdev_get_try_format(sd, cfg, 0);
+ 	const struct ov2640_win_size *win =
+-		ov2640_select_win(OV2640_800X480_WIDTH, OV2640_800X480_HEIGHT);
++		ov2640_select_win(OV2640_1280X720_WIDTH, OV2640_1280X720_HEIGHT);
+@@ -1259,7 +1284,7 @@ static int ov2640_probe(struct i2c_client *client)
+ 	if (ret)
+ 		goto err_clk;
+ 
+-	priv->win = ov2640_select_win(OV2640_800X480_WIDTH, OV2640_800X480_HEIGHT);
++	priv->win = ov2640_select_win(OV2640_1280X720_WIDTH, OV2640_1280X720_HEIGHT);
+ 	priv->cfmt_code = MEDIA_BUS_FMT_RGB565_2X8_BE;
+ 
+ 	v4l2_i2c_subdev_init(&priv->subdev, client, &ov2640_subdev_ops);
+diff --git a/drivers/media/platform/xilinx/xilinx-dma.c b/drivers/media/platform/xilinx/xilinx-dma.c
+--- a/drivers/media/platform/xilinx/xilinx-dma.c
++++ b/drivers/media/platform/xilinx/xilinx-dma.c
+@@ -30,6 +30,6 @@
+ #include "xilinx-vipp.h"
+ 
+ #define XVIP_DMA_DEF_FORMAT		V4L2_PIX_FMT_RGB565
+-#define XVIP_DMA_DEF_WIDTH		800
+-#define XVIP_DMA_DEF_HEIGHT		480
++#define XVIP_DMA_DEF_WIDTH		1280
++#define XVIP_DMA_DEF_HEIGHT		720
+ 
+ /* Minimum and maximum widths are expressed in bytes */
+-- 
+2.25.1
