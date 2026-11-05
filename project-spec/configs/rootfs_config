@@ -4002,9 +4002,10 @@ CONFIG_imagefeature-debug-tweaks=y
 # apps 
 #
 CONFIG_camera-fb=y
-CONFIG_camera-fb-lvgl=y
+# CONFIG_camera-fb-lvgl is not set
+CONFIG_camera-fb-lvgl-alpha=y
 # CONFIG_gpio-demo is not set
-CONFIG_lvgl-demo=y
+# CONFIG_lvgl-demo is not set
 # CONFIG_peekpoke is not set
 
 #

@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_BIN="${ROOT_DIR}/images/linux/BOOT-QSPI-ALL.BIN"
 MAX_QSPI_SIZE=$((16 * 1024 * 1024))
+QSPI_KERNEL_OFFSET=$((0x2A0000))
+QSPI_BOOTENV_OFFSET=$((0xFD0000))
 DO_FLASH=1
 
 usage() {
@@ -98,6 +100,14 @@ for artifact in \
         exit 1
     fi
 done
+
+FIT_SIZE="$(wc -c < images/linux/image.ub)"
+FIT_CAPACITY=$((QSPI_BOOTENV_OFFSET - QSPI_KERNEL_OFFSET))
+if (( FIT_SIZE > FIT_CAPACITY )); then
+    echo "image.ub is ${FIT_SIZE} bytes; the QSPI kernel partition holds ${FIT_CAPACITY} bytes." >&2
+    echo "Reduce image.ub before packaging or flashing. Any existing BOOT-QSPI-ALL.BIN may be stale." >&2
+    exit 1
+fi
 
 echo "[4/5] Packaging QSPI boot image..."
 petalinux-package --boot \
