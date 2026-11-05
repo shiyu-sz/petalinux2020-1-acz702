@@ -5,3 +5,4 @@ CONFIG_gpio-demo
 CONFIG_peekpoke
 CONFIG_lvgl-demo
 CONFIG_camera-fb
+CONFIG_camera-fb-lvgl

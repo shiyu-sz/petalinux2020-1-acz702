@@ -33,14 +33,14 @@ RAMDISK_IMAGE_ADDRESS_zynqmp = "${@append_baseaddr(d,"0x4000000")}"
 RAMDISK_IMAGE_ADDRESS_versal = "${@append_baseaddr(d,"0x4000000")}"
 
 ## 16 MiB Zynq QSPI layout: boot.scr at 0x290000, image.ub at 0x2A0000,
-## and environment at 0xFA0000.
+## and environment at 0xFD0000.
 QSPI_KERNEL_OFFSET_zynq = "0x2A0000"
 QSPI_RAMDISK_OFFSET_zynq = "0x1580000"
 
 NAND_KERNEL_OFFSET_zynq = "0x1000000"
 NAND_RAMDISK_OFFSET_zynq = "0x4600000"
 
-QSPI_KERNEL_SIZE_zynq = "0xD00000"
+QSPI_KERNEL_SIZE_zynq = "0xD30000"
 QSPI_RAMDISK_SIZE_zynq = "0xA00000"
 
 NAND_KERNEL_SIZE = "0x3200000"
@@ -83,7 +83,7 @@ FIT_IMAGE_LOAD_ADDRESS = "${@append_baseaddr(d,"0x10000000")}"
 QSPI_FIT_IMAGE_LOAD_ADDRESS = "${@append_baseaddr(d,"0x10000000")}"
 QSPI_FIT_IMAGE_SIZE = "0x6400000"
 QSPI_FIT_IMAGE_SIZE_zynqmpdr = "0x3F00000"
-QSPI_FIT_IMAGE_SIZE_zynq = "0xD00000"
+QSPI_FIT_IMAGE_SIZE_zynq = "0xD30000"
 
 NAND_FIT_IMAGE_LOAD_ADDRESS = "${@append_baseaddr(d,"0x10000000")}"
 NAND_FIT_IMAGE_SIZE = "0x6400000"
