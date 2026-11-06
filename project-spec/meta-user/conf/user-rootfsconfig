@@ -7,3 +7,4 @@ CONFIG_lvgl-demo
 CONFIG_camera-fb
 CONFIG_camera-fb-lvgl
 CONFIG_camera-fb-lvgl-alpha
+CONFIG_lvgl-mp4-demo

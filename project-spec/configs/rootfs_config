@@ -4006,6 +4006,7 @@ CONFIG_camera-fb-lvgl=y
 CONFIG_camera-fb-lvgl-alpha=y
 CONFIG_gpio-demo=y
 CONFIG_lvgl-demo=y
+CONFIG_lvgl-mp4-demo=y
 # CONFIG_peekpoke is not set
 
 #

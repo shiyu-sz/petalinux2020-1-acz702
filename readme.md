@@ -1,5 +1,7 @@
 ### 烧写到sd卡
 ./build.sh clean build sd  
+petalinux-build
+sudo cp images/linux/BOOT.BIN images/linux/boot.scr images/linux/image.ub /media/sy/BOOT
 
 ### 环境变量
 source /opt/pkg/petalinux/settings.sh
