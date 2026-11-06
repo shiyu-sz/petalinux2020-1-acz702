@@ -1,35 +1,28 @@
+### 烧写到sd卡
+./build.sh clean build sd  
 
-### 环境变量  
-source /opt/pkg/petalinux/settings.sh  
+### 环境变量
+source /opt/pkg/petalinux/settings.sh
 
-### 更新xsa文件  
-petalinux-config --get-hw-description ./vivado_project  
+### 更新xsa文件
+petalinux-config --get-hw-description ./vivado_project --silentconfig
 
-###  配置  
-petalinux-config -c u-boot
-petalinux-config -c kernel
+### 配置
+petalinux-config -c u-boot 
+petalinux-config -c kernel 
 petalinux-config -c rootfs
 
-### 清除（如果xsa更新了ps侧的配置）  
-petalinux-build -x mrproper -f  
+### 清除（如果xsa更新了ps侧的配置）
+petalinux-build -x mrproper -f
 
-### 编译  
-petalinux-build  
+### 编译
+petalinux-build
 
-### 打包  
+### 打包
 petalinux-package --boot \
-      --bif qspi-all.bif \
-      --output images/linux/BOOT-QSPI-ALL.BIN \
-      --force
-
-### 一键编译、打包并下载到 QSPI
-在工程根目录执行：
-
-```sh
-./build-and-flash-qspi.sh
-```
-
-脚本会从 `vivado_project` 更新硬件描述，清理并重新编译 PetaLinux，随后打包并通过 JTAG 直接写入 QSPI。只想更新硬件描述、编译和打包、不写板子时运行 `./build-and-flash-qspi.sh --no-flash`。脚本会检查生成的镜像不超过 16 MiB。
+    --bif qspi-all.bif \
+    --output images/linux/BOOT-QSPI-ALL.BIN \
+    --force
 
 ### 下载程序
 program_flash \

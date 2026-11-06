@@ -1,23 +1,11 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
-
-SRC_URI += "file://platform-top.h"
-
 do_configure_append () {
-	if [ "${U_BOOT_AUTO_CONFIG}" = "1" ]; then
-		install ${WORKDIR}/platform-auto.h ${S}/include/configs/
-		install ${WORKDIR}/platform-top.h ${S}/include/configs/
+	# Ignore any environment saved by the previous QSPI image. SD boot must
+	# use the default distro boot command, which searches the SD card.
+	sed -i 's/^CONFIG_ENV_IS_IN_SPI_FLASH=y$/# CONFIG_ENV_IS_IN_SPI_FLASH is not set/' ${B}/.config
+	if grep -q '^# CONFIG_ENV_IS_NOWHERE is not set$' ${B}/.config; then
+		sed -i 's/^# CONFIG_ENV_IS_NOWHERE is not set$/CONFIG_ENV_IS_NOWHERE=y/' ${B}/.config
+	else
+		echo 'CONFIG_ENV_IS_NOWHERE=y' >> ${B}/.config
 	fi
-	# The selected xilinx_zynq_virt_defconfig also uses this Kconfig value.
-	# Keep U-Boot's QSPI script and environment offsets aligned with the flash layout.
-	sed -i 's/^CONFIG_BOOT_SCRIPT_OFFSET=.*/CONFIG_BOOT_SCRIPT_OFFSET=0x290000/' ${B}/.config
-	grep -q '^CONFIG_BOOT_SCRIPT_OFFSET=0x290000$' ${B}/.config
-	sed -i 's/^CONFIG_ENV_OFFSET=.*/CONFIG_ENV_OFFSET=0xFD0000/' ${B}/.config
-	grep -q '^CONFIG_ENV_OFFSET=0xFD0000$' ${B}/.config
-}
-
-do_configure_append_microblaze () {
-	if [ "${U_BOOT_AUTO_CONFIG}" = "1" ]; then
-		install -d ${B}/source/board/xilinx/microblaze-generic/
-		install ${WORKDIR}/config.mk ${B}/source/board/xilinx/microblaze-generic/
-	fi
+	grep -q '^CONFIG_ENV_IS_NOWHERE=y$' ${B}/.config
 }
