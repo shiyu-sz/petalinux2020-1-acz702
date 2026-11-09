@@ -39,6 +39,12 @@ stty -F /dev/ttyS0 115200 cs8 -cstopb -parenb -crtscts -ixon -ixoff raw -echo
 cat /dev/ttyS0
 printf 'PL_UART_OK\r\n' > /dev/ttyS0
 
+### 测试CAN
+ifconfig can0 down
+ip link set can0 type can bitrate 500000
+ifconfig can0 up
+cansend can0 123#0102030405060708
+
 ### 测试hdmi显示  
 modetest -M xlnx -s 34:1280x720-60@RG16
 
