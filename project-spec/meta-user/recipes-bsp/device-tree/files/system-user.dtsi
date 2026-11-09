@@ -1,5 +1,20 @@
 /include/ "system-conf.dtsi"
+
+/* GEM0 uses the PS MIO RGMII and MDIO pins configured in the XSA.
+ * The Linux 5.4 macb driver scans MDIO when no phy-handle is specified,
+ * allowing the RTL8211F strap-selected PHY address to be discovered.
+ */
+&gem0 {
+	status = "okay";
+	/* RTL8211F RX clock delay must be enabled by its RXDLY strap. */
+	phy-mode = "rgmii-id";
+};
+
 / {
+	aliases {
+		ethernet0 = &gem0;
+	};
+
 	/* Reserve the top 128 MiB of the 512 MiB DDR for shared memory. */
 	reserved-memory {
 		#address-cells = <1>;
